@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
-	"version": "1.0.0",
+	"id": "obsidian-bookxnote",
+	"name": "bookxnote-sync",
+	"version": "0.1.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+	"description": "同步bookxnote中的笔记到Obsidian中",
+	"author": "CodeListening",
+	"authorUrl": "https://github.com/CodeListening",
+	"isDesktopOnly": true
 }
