@@ -1,4 +1,4 @@
-import {App, Notice, Plugin, PluginSettingTab, Setting,  TFile} from 'obsidian';
+import {App, Notice, Plugin, PluginSettingTab, Setting, TFile} from 'obsidian';
 import * as fs from "fs";
 
 // Remember to rename these classes and interfaces!
@@ -6,11 +6,13 @@ import * as fs from "fs";
 interface MyPluginSettings {
 	BookXNotePath: string;
 	ObsidianPath: string;
+	IsIgnoreUnchanged: boolean;
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	BookXNotePath: "",
-	ObsidianPath: ""
+	ObsidianPath: "",
+	IsIgnoreUnchanged: true,
 }
 
 
@@ -40,7 +42,7 @@ export default class MyPlugin extends Plugin {
 								.onClick(async () => {
 									const titleName = file.name.replace(".md", "")
 									new Notice(`开始同步BookXNote ${titleName}`);
-									const nb = getBookXNote(file, "book_x_note_nb")
+									const nb = GetFilePropertyByKey(file, "book_x_note_nb")
 									console.log("nb:" + nb);
 									if (nb) {
 										try {
@@ -80,7 +82,7 @@ export default class MyPlugin extends Plugin {
 				if (activeFile) {
 					const titleName = activeFile.name.replace(".md", "")
 					new Notice(`开始同步BookXNote ${titleName}`);
-					const nb = getBookXNote(activeFile, "book_x_note_nb")
+					const nb = GetFilePropertyByKey(activeFile, "book_x_note_nb")
 					console.log("nb:" + nb);
 					if (nb) {
 						readNotebook(this, nb, titleName).then(() => {
@@ -156,6 +158,9 @@ async function readNotebook(t: MyPlugin, nb: string, entry: string) {
 
 	const notebookMarkup = notebookDir + "\\markups.json"
 	const markup = fs.readFileSync(notebookMarkup, 'utf8')
+	// 读取notebookMarup 文件的修改时间
+	const markupStat = fs.statSync(notebookMarkup)
+	console.log("markupStat:" + markupStat.mtime);
 	// console.log(markup);
 	const markupObj = JSON.parse(markup)
 	const render = parseMarkupObj(markupObj, 1, nb, book_uuid)
@@ -179,6 +184,18 @@ async function readNotebook(t: MyPlugin, nb: string, entry: string) {
 		if (file) {
 			// console.log("文件存在, 进行更改");
 			// 读取 origin_front_matter 到 origin_front_matter 中
+			const sync_time = GetFilePropertyByKey(file, "book_x_note_sync_time")
+			// 如果sync_time存在, 则和文件的修改时间作比较，如果sync_time_date 大于 markupStat.mtime, 则不进行更改
+			if (sync_time && t.settings.IsIgnoreUnchanged) {
+				// 把时间转换成Date对象
+				const sync_time_date = new Date(sync_time)
+				console.log("sync_time_date:" + sync_time_date)
+				if (sync_time_date > markupStat.mtime) {
+					// 如果sync_time_date 大于 markupStat.mtime, 则不进行更改
+					new Notice(`${entry}  没有更新, 不进行更改`)
+					return
+				}
+			}
 			await app.fileManager.processFrontMatter(file, (frontmatter) => {
 				origin_front_matter = {...frontmatter}
 				// console.log("原来的属性:" + JSON.stringify(origin_front_matter))
@@ -223,6 +240,10 @@ function parseMarkupObj(markupObj: any, headerNumber: number, nb: string, book_u
 			const book_link = `bookxnotepro://opennote/?nb=${nb}&book=${book_uuid}&page=${markupObj.page}&x=${x}&y=${y}&id=1&uuid=${markupObj.uuid}`
 			// console.log("book_link:", book_link)
 			const link = `[p${markupObj.page}](${book_link})`
+			// 如果render 以 "]"结尾 需要再加两个空格
+			if (render.endsWith("]")) {
+				render += "  "
+			}
 			render += `${link}`
 		}
 		render += "\n\n"
@@ -243,7 +264,7 @@ function parseMarkupObj(markupObj: any, headerNumber: number, nb: string, book_u
 
 
 // 检查文件中是否有bookxnote属性
-function checkBookXNote(file: TFile, key: string) {
+function isFileHasProperty(file: TFile, key: string) {
 	// 获取文件的属性
 	const cache = this.app.metadataCache.getFileCache(file);
 	// 查看fontmatter 中有没有 bookxnote属性
@@ -251,8 +272,8 @@ function checkBookXNote(file: TFile, key: string) {
 }
 
 // 获取bookxnote的值
-function getBookXNote(file: TFile, key: string): string | null {
-	if (checkBookXNote(file, key)) {
+function GetFilePropertyByKey(file: TFile, key: string): string | null {
+	if (isFileHasProperty(file, key)) {
 		const cache = this.app.metadataCache.getFileCache(file)
 		const frontMatter = cache?.frontmatter;
 		return frontMatter[key]
@@ -295,5 +316,15 @@ class BookXNoteSetting extends PluginSettingTab {
 					this.plugin.settings.ObsidianPath = value;
 					await this.plugin.saveSettings();
 				}))
+
+		new Setting(containerEl)
+			.setName('IsIgnoreUnchanged')
+			.setDesc('是否忽略未修改的文件,通过比对文件的修改时间来判断文件是否修改')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.IsIgnoreUnchanged)
+				.onChange(async (value) => {
+					this.plugin.settings.IsIgnoreUnchanged = value;
+				})
+			)
 	}
 }
