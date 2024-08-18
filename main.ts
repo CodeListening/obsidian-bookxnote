@@ -1,4 +1,4 @@
-import {App, Notice, Plugin, PluginSettingTab, Setting} from 'obsidian';
+import {App, Notice, Plugin, PluginSettingTab, Setting,  TFile} from 'obsidian';
 import * as fs from "fs";
 
 // Remember to rename these classes and interfaces!
@@ -21,13 +21,42 @@ export default class MyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('scroll-text', 'BookXNote', (_: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('scroll-text', 'BookXNote同步所有笔记', (_: MouseEvent) => {
 			// Called when the user clicks the icon.
 			new Notice('开始同步BookXNote...');
 			syncBookXNote(this)
 		});
 		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
+		// ribbonIconEl.addClass('my-plugin-ribbon-class');
+
+		// 增加文件设置
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu, file) => {
+					if (file instanceof TFile) {
+						menu.addItem((item) => {
+							item
+								.setTitle('BookXNote同步此笔记')
+								.setIcon('refresh-cw')
+								.onClick(async () => {
+									const titleName = file.name.replace(".md", "")
+									new Notice(`开始同步BookXNote ${titleName}`);
+									const nb = getBookXNote(file, "book_x_note_nb")
+									console.log("nb:" + nb);
+									if (nb) {
+										try {
+											await readNotebook(this, nb, titleName)
+										} catch (e) {
+											new Notice(`${titleName}同步失败:` + e);
+										}
+									} else {
+										new Notice(`${titleName}没有找到对应的属性book_x_note_nb, 请全部更新一次`);
+									}
+								});
+						});
+					}
+				}
+			))
+
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
@@ -36,12 +65,33 @@ export default class MyPlugin extends Plugin {
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'bookxnote-sync',
-			name: 'BookXNote Sync',
+			name: '同步所有笔记',
 			callback: () => {
 				new Notice('开始同步BookXNote...');
 				syncBookXNote(this)
 			}
 		});
+
+		this.addCommand({
+			id: 'bookxnote-sync-one',
+			name: '同步当前笔记',
+			callback: () => {
+				const activeFile = this.app.workspace.getActiveFile()
+				if (activeFile) {
+					const titleName = activeFile.name.replace(".md", "")
+					new Notice(`开始同步BookXNote ${titleName}`);
+					const nb = getBookXNote(activeFile, "book_x_note_nb")
+					console.log("nb:" + nb);
+					if (nb) {
+						readNotebook(this, nb, titleName).then(() => {
+							new Notice(`${titleName}同步成功`)
+						}).catch((e) => {
+							new Notice(`${titleName}同步失败:` + e);
+						})
+					}
+				}
+			}
+		})
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new BookXNoteSetting(this.app, this));
 	}
@@ -60,7 +110,7 @@ export default class MyPlugin extends Plugin {
 }
 
 // 同步函数
-async function syncBookXNote(t: MyPlugin ) {
+async function syncBookXNote(t: MyPlugin) {
 	const notebookDir = t.settings.BookXNotePath
 	if (!notebookDir) {
 		new Notice('请设置BookXNote路径');
@@ -79,10 +129,10 @@ async function syncBookXNote(t: MyPlugin ) {
 	}
 	for (let i = 0; i < manifestObj.notebooks?.length; i++) {
 		let notebook = manifestObj.notebooks[i];
-		try{
+		try {
 			await readNotebook(t, notebook.id, notebook.entry)
 			console.log(notebook.id + ":" + notebook.entry);
-		}catch (e) {
+		} catch (e) {
 			new Notice(`读取${notebook.entry}失败:` + e);
 			console.log(e);
 		}
@@ -119,7 +169,7 @@ async function readNotebook(t: MyPlugin, nb: string, entry: string) {
 	// 创建文件夹
 	await app.vault.adapter.mkdir(localDir)
 	// 合并路径
-	let filePath =  `${localDir}/${entry}.md`
+	let filePath = `${localDir}/${entry}.md`
 	let file
 	const existFile = await app.vault.adapter.exists(filePath)
 	// console.log("文件是否存在:" + existFile)
@@ -130,7 +180,7 @@ async function readNotebook(t: MyPlugin, nb: string, entry: string) {
 			// console.log("文件存在, 进行更改");
 			// 读取 origin_front_matter 到 origin_front_matter 中
 			await app.fileManager.processFrontMatter(file, (frontmatter) => {
-				origin_front_matter = {... frontmatter}
+				origin_front_matter = {...frontmatter}
 				// console.log("原来的属性:" + JSON.stringify(origin_front_matter))
 			})
 			await app.vault.modify(file, render)
@@ -193,26 +243,23 @@ function parseMarkupObj(markupObj: any, headerNumber: number, nb: string, book_u
 
 
 // 检查文件中是否有bookxnote属性
-// function checkBookXNote(file: TAbstractFile) {
-// 	// 获取文件的属性
-// 	const filePath = file.path;
-// 	const cache = this.app.metadataCache.getCache(filePath);
-// 	// 查看fontmatter 中有没有 bookxnote属性
-// 	return !!(cache?.frontmatter && cache.frontmatter.bookxnote);
-//
-// }
+function checkBookXNote(file: TFile, key: string) {
+	// 获取文件的属性
+	const cache = this.app.metadataCache.getFileCache(file);
+	// 查看fontmatter 中有没有 bookxnote属性
+	return cache?.frontmatter && cache.frontmatter[key]
+}
 
 // 获取bookxnote的值
-// function getBookXNote(file: TAbstractFile): string | null {
-// 	if (checkBookXNote(file)) {
-// 		const filePath = file.path;
-// 		const cache = this.app.metadataCache.getCache(filePath);
-// 		const frontMatter = cache?.frontmatter;
-// 		return frontMatter.bookxnote
-// 	} else {
-// 		return null
-// 	}
-// }
+function getBookXNote(file: TFile, key: string): string | null {
+	if (checkBookXNote(file, key)) {
+		const cache = this.app.metadataCache.getFileCache(file)
+		const frontMatter = cache?.frontmatter;
+		return frontMatter[key]
+	} else {
+		return null
+	}
+}
 
 
 class BookXNoteSetting extends PluginSettingTab {
