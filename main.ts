@@ -1,4 +1,4 @@
-import {App, Notice, Plugin, PluginSettingTab, Setting, TFile} from 'obsidian';
+import {App,  Notice, Plugin, PluginSettingTab, Setting, TFile} from 'obsidian';
 import * as fs from "fs";
 
 // Remember to rename these classes and interfaces!
@@ -215,6 +215,7 @@ async function readNotebook(t: MyPlugin, nb: string, entry: string) {
 			frontmatter.book_x_note_sync_time = new Date().toLocaleString()
 		})
 	}
+	new Notice(`${entry}同步成功`)
 	// if (file){
 	// 	await app.workspace.openLinkText(file.path, "", true)
 	// }
