@@ -1,5 +1,5 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TAbstractFile} from 'obsidian';
-import * as fs from "fs" ;
+import {App, Notice, Plugin, PluginSettingTab, Setting} from 'obsidian';
+import * as fs from "fs";
 
 // Remember to rename these classes and interfaces!
 
@@ -21,7 +21,7 @@ export default class MyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('scroll-text', 'BookXNote', (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('scroll-text', 'BookXNote', (_: MouseEvent) => {
 			// Called when the user clicks the icon.
 			new Notice('开始同步BookXNote...');
 			syncBookXNote(this)
@@ -35,52 +35,15 @@ export default class MyPlugin extends Plugin {
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'open-sample-modal-simple',
-			name: 'Open sample modal (simple)',
+			id: 'bookxnote-sync',
+			name: 'BookXNote Sync',
 			callback: () => {
-				new SampleModal(this.app).open();
+				new Notice('开始同步BookXNote...');
+				syncBookXNote(this)
 			}
 		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				editor.replaceSelection('Sample Editor Command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-sample-modal-complex',
-			name: 'Open sample modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-			}
-		});
-
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		this.addSettingTab(new BookXNoteSetting(this.app, this));
 	}
 
 	onunload() {
@@ -99,7 +62,6 @@ export default class MyPlugin extends Plugin {
 // 同步函数
 async function syncBookXNote(t: MyPlugin ) {
 	const notebookDir = t.settings.BookXNotePath
-	const app = t.app
 	if (!notebookDir) {
 		new Notice('请设置BookXNote路径');
 		return
@@ -231,46 +193,29 @@ function parseMarkupObj(markupObj: any, headerNumber: number, nb: string, book_u
 
 
 // 检查文件中是否有bookxnote属性
-function checkBookXNote(file: TAbstractFile) {
-	// 获取文件的属性
-	const filePath = file.path;
-	const cache = this.app.metadataCache.getCache(filePath);
-	// 查看fontmatter 中有没有 bookxnote属性
-	return !!(cache?.frontmatter && cache.frontmatter.bookxnote);
-
-}
+// function checkBookXNote(file: TAbstractFile) {
+// 	// 获取文件的属性
+// 	const filePath = file.path;
+// 	const cache = this.app.metadataCache.getCache(filePath);
+// 	// 查看fontmatter 中有没有 bookxnote属性
+// 	return !!(cache?.frontmatter && cache.frontmatter.bookxnote);
+//
+// }
 
 // 获取bookxnote的值
-function getBookXNote(file: TAbstractFile): string | null {
-	if (checkBookXNote(file)) {
-		const filePath = file.path;
-		const cache = this.app.metadataCache.getCache(filePath);
-		const frontMatter = cache?.frontmatter;
-		const bookxnote = frontMatter.bookxnote;
-		return bookxnote
-	} else {
-		return null
-	}
-}
+// function getBookXNote(file: TAbstractFile): string | null {
+// 	if (checkBookXNote(file)) {
+// 		const filePath = file.path;
+// 		const cache = this.app.metadataCache.getCache(filePath);
+// 		const frontMatter = cache?.frontmatter;
+// 		return frontMatter.bookxnote
+// 	} else {
+// 		return null
+// 	}
+// }
 
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
+class BookXNoteSetting extends PluginSettingTab {
 	plugin: MyPlugin;
 
 	constructor(app: App, plugin: MyPlugin) {
