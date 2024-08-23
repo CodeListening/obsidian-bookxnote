@@ -3,21 +3,21 @@ import * as fs from "fs";
 
 // Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
+interface BookXNoteSyncSettings {
 	BookXNotePath: string;
 	ObsidianPath: string;
 	IsIgnoreUnchanged: boolean;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
+const DEFAULT_SETTINGS: BookXNoteSyncSettings = {
 	BookXNotePath: "",
 	ObsidianPath: "",
 	IsIgnoreUnchanged: true,
 }
 
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class BookXNotePlugin extends Plugin {
+	settings: BookXNoteSyncSettings;
 
 	// 右上角菜单
 	async onload() {
@@ -61,8 +61,8 @@ export default class MyPlugin extends Plugin {
 
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
+		// const statusBarItemEl = this.addStatusBarItem();
+		// statusBarItemEl.setText('Status Bar Text');
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
@@ -95,7 +95,7 @@ export default class MyPlugin extends Plugin {
 			}
 		})
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new BookXNoteSetting(this.app, this));
+		this.addSettingTab(new BookXNoteSyncSettingTab(this.app, this));
 	}
 
 	onunload() {
@@ -112,7 +112,7 @@ export default class MyPlugin extends Plugin {
 }
 
 // 同步函数
-async function syncBookXNote(t: MyPlugin) {
+async function syncBookXNote(t: BookXNotePlugin) {
 	const notebookDir = t.settings.BookXNotePath
 	if (!notebookDir) {
 		new Notice('请设置BookXNote路径');
@@ -142,7 +142,7 @@ async function syncBookXNote(t: MyPlugin) {
 }
 
 // 读取一本书的notebook内容
-async function readNotebook(t: MyPlugin, nb: string, entry: string) {
+async function readNotebook(t: BookXNotePlugin, nb: string, entry: string) {
 	const app = t.app
 	const notebookDirBase = t.settings.BookXNotePath
 	const notebookDir = notebookDirBase + `\\${entry}`
@@ -283,10 +283,10 @@ function GetFilePropertyByKey(file: TFile, key: string): string | null {
 }
 
 
-class BookXNoteSetting extends PluginSettingTab {
-	plugin: MyPlugin;
+class BookXNoteSyncSettingTab extends PluginSettingTab {
+	plugin: BookXNotePlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: BookXNotePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
