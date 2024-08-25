@@ -129,8 +129,9 @@ async function syncBookXNote(t: BookXNotePlugin) {
 		new Notice('没有notebooks');
 		return
 	}
-	for (let i = 0; i < manifestObj.notebooks?.length; i++) {
-		let notebook = manifestObj.notebooks[i];
+	let bookList = GetBookFromNoteBook(manifestObj)
+	for (let i = 0; i < bookList.length; i++) {
+		let notebook = bookList[i];
 		try {
 			await readNotebook(t, notebook.id, notebook.entry)
 			console.log(notebook.id + ":" + notebook.entry);
@@ -139,6 +140,23 @@ async function syncBookXNote(t: BookXNotePlugin) {
 			console.log(e);
 		}
 	}
+}
+
+function GetBookFromNoteBook(mainifestObj: any){
+	let result: any[] = []
+	if(!mainifestObj.notebooks){
+		return []
+	}
+	for (let i = 0; i < mainifestObj.notebooks?.length; i++) {
+		let notebook = mainifestObj.notebooks[i];
+		if (notebook["type"] == 0){
+			result.push(mainifestObj.notebooks[i])
+		}else{
+			const childBooks = GetBookFromNoteBook(notebook)
+			result = result.concat(childBooks)
+		}
+	}
+	return result
 }
 
 // 读取一本书的notebook内容
