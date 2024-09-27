@@ -1,7 +1,6 @@
 import {App,  Notice, Plugin, PluginSettingTab, Setting, TFile} from 'obsidian';
 import * as fs from "fs";
 
-// Remember to rename these classes and interfaces!
 
 interface BookXNoteSyncSettings {
 	BookXNotePath: string;
@@ -43,7 +42,7 @@ export default class BookXNotePlugin extends Plugin {
 									const titleName = file.name.replace(".md", "")
 									new Notice(`开始同步BookXNote ${titleName}`);
 									const nb = GetFilePropertyByKey(file, "book_x_note_nb")
-									console.log("nb:" + nb);
+									// console.log("nb:" + nb);
 									if (nb) {
 										try {
 											await readNotebook(this, nb, titleName)
@@ -66,7 +65,7 @@ export default class BookXNotePlugin extends Plugin {
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: 'bookxnote-sync',
+			id: 'sync',
 			name: '同步所有笔记',
 			callback: () => {
 				new Notice('开始同步BookXNote...');
@@ -75,7 +74,7 @@ export default class BookXNotePlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'bookxnote-sync-one',
+			id: 'sync-one',
 			name: '同步当前笔记',
 			callback: () => {
 				const activeFile = this.app.workspace.getActiveFile()
@@ -83,7 +82,7 @@ export default class BookXNotePlugin extends Plugin {
 					const titleName = activeFile.name.replace(".md", "")
 					new Notice(`开始同步BookXNote ${titleName}`);
 					const nb = GetFilePropertyByKey(activeFile, "book_x_note_nb")
-					console.log("nb:" + nb);
+					// console.log("nb:" + nb);
 					if (nb) {
 						readNotebook(this, nb, titleName).then(() => {
 							new Notice(`${titleName}同步成功`)
@@ -124,7 +123,7 @@ async function syncBookXNote(t: BookXNotePlugin) {
 	// console.log(manifest);
 	// 解析 json文件
 	const manifestObj = JSON.parse(manifest)
-	console.log(manifestObj);
+	// console.log(manifestObj);
 	if (!manifestObj.notebooks) {
 		new Notice('没有notebooks');
 		return
@@ -134,10 +133,10 @@ async function syncBookXNote(t: BookXNotePlugin) {
 		let notebook = bookList[i];
 		try {
 			await readNotebook(t, notebook.id, notebook.entry)
-			console.log(notebook.id + ":" + notebook.entry);
+			// console.log(notebook.id + ":" + notebook.entry);
 		} catch (e) {
 			new Notice(`读取${notebook.entry}失败:` + e);
-			console.log(e);
+			// console.log(e);
 		}
 	}
 }
@@ -170,15 +169,15 @@ async function readNotebook(t: BookXNotePlugin, nb: string, entry: string) {
 	// console.log(manifest);
 	// 解析 json文件
 	const manifestObj = JSON.parse(manifest)
-	console.log(manifestObj)
+	// console.log(manifestObj)
 	const book_uuid = manifestObj.res[0]["uuid"]
-	console.log("书的uuid:" + book_uuid);
+	// console.log("书的uuid:" + book_uuid);
 
 	const notebookMarkup = notebookDir + "\\markups.json"
 	const markup = fs.readFileSync(notebookMarkup, 'utf8')
 	// 读取notebookMarup 文件的修改时间
 	const markupStat = fs.statSync(notebookMarkup)
-	console.log("markupStat:" + markupStat.mtime);
+	// console.log("markupStat:" + markupStat.mtime);
 	// console.log(markup);
 	const markupObj = JSON.parse(markup)
 	const render = parseMarkupObj(markupObj, 1, nb, book_uuid)
@@ -207,17 +206,17 @@ async function readNotebook(t: BookXNotePlugin, nb: string, entry: string) {
 			if (sync_time && t.settings.IsIgnoreUnchanged) {
 				// 把时间转换成Date对象
 				const sync_time_date = new Date(sync_time)
-				console.log("sync_time_date:" + sync_time_date)
+				// console.log("sync_time_date:" + sync_time_date)
 				if (sync_time_date > markupStat.mtime) {
 					// 如果sync_time_date 大于 markupStat.mtime, 则不进行更改
 					new Notice(`${entry}  没有更新, 不进行更改`)
 					return
 				}
 			}
-			await app.fileManager.processFrontMatter(file, (frontmatter) => {
-				origin_front_matter = {...frontmatter}
+			// await app.fileManager.processFrontMatter(file, (frontmatter) => {
+			// 	origin_front_matter = {...frontmatter}
 				// console.log("原来的属性:" + JSON.stringify(origin_front_matter))
-			})
+			// })
 			await app.vault.modify(file, render)
 		}
 	} else {
@@ -316,7 +315,7 @@ class BookXNoteSyncSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('BookXNotePath')
+			.setName('BookXNote Path')
 			.setDesc('BookXNote笔记路径')
 			.addText(text => text
 				.setPlaceholder('输入BookXNote笔记路径')
@@ -326,7 +325,7 @@ class BookXNoteSyncSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 		new Setting(containerEl)
-			.setName('ObsidianPath')
+			.setName('Obsidian Path')
 			.setDesc('笔记保存到Obsidian的路径')
 			.addText(text => text
 				.setPlaceholder('输入笔记保存到Obsidian的相对路径')
@@ -337,7 +336,7 @@ class BookXNoteSyncSettingTab extends PluginSettingTab {
 				}))
 
 		new Setting(containerEl)
-			.setName('IsIgnoreUnchanged')
+			.setName('Is Ignore Unchanged')
 			.setDesc('是否忽略未修改的文件,通过比对文件的修改时间来判断文件是否修改')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.IsIgnoreUnchanged)
