@@ -3,7 +3,7 @@
 	"name": "BookXNote Sync",
 	"version": "0.3.0",
 	"minAppVersion": "0.15.0",
-	"description": "同步bookxnote中的笔记到Obsidian中",
+	"description": "从bookxnote中同步笔记",
 	"author": "CodeListening",
 	"authorUrl": "https://github.com/CodeListening",
 	"isDesktopOnly": true
